@@ -34,7 +34,7 @@ hs_err_pid*
 
 # Terraform
 **/.terraform/*
-*.tfstate
+**/*.tfstate
 *.tfstate.*
 crash.log
 crash.*.log
@@ -50,6 +50,7 @@ terraform.rc
 
 # AWS
 .aws/
+response.json
 
 # OS
 .DS_Store

@@ -7,42 +7,61 @@ terraform {
   }
 }
 
-# Configure the AWS provider to use LocalStack
+# Environment-specific configuration
+locals {
+  is_prod = terraform.workspace == "prod"
+  
+  # Environment-specific settings
+  aws_endpoint = local.is_prod ? null : var.aws_endpoint
+  aws_profile  = local.is_prod ? var.prod_aws_profile : var.dev_aws_profile
+  
+  # LocalStack-specific settings (only for dev)
+  skip_credentials_validation = !local.is_prod
+  skip_metadata_api_check     = !local.is_prod
+  skip_requesting_account_id  = !local.is_prod
+}
+
+# Configure AWS provider with workspace-aware settings
 provider "aws" {
-    region  = var.aws_region
-    profile = var.aws_profile
-    
-    endpoints {
-        apigateway     = var.aws_endpoint
-        cloudformation = var.aws_endpoint
-        cloudwatch     = var.aws_endpoint
-        dynamodb       = var.aws_endpoint
-        ec2            = var.aws_endpoint
-        es             = var.aws_endpoint
-        firehose       = var.aws_endpoint
-        iam            = var.aws_endpoint
-        kinesis        = var.aws_endpoint
-        lambda         = var.aws_endpoint
-        route53        = var.aws_endpoint
-        redshift       = var.aws_endpoint
-        s3             = var.aws_endpoint
-        secretsmanager = var.aws_endpoint
-        ses            = var.aws_endpoint
-        sns            = var.aws_endpoint
-        sqs            = var.aws_endpoint
-        ssm            = var.aws_endpoint
-        stepfunctions  = var.aws_endpoint
-        sts            = var.aws_endpoint
+  region  = var.aws_region
+  profile = local.aws_profile
+  
+  # LocalStack endpoints (only for dev workspace)
+  dynamic "endpoints" {
+    for_each = local.is_prod ? [] : [1]
+    content {
+      apigateway     = local.aws_endpoint
+      cloudformation = local.aws_endpoint
+      cloudwatch     = local.aws_endpoint
+      dynamodb       = local.aws_endpoint
+      ec2            = local.aws_endpoint
+      es             = local.aws_endpoint
+      firehose       = local.aws_endpoint
+      iam            = local.aws_endpoint
+      kinesis        = local.aws_endpoint
+      lambda         = local.aws_endpoint
+      route53        = local.aws_endpoint
+      redshift       = local.aws_endpoint
+      s3             = local.aws_endpoint
+      secretsmanager = local.aws_endpoint
+      ses            = local.aws_endpoint
+      sns            = local.aws_endpoint
+      sqs            = local.aws_endpoint
+      ssm            = local.aws_endpoint
+      stepfunctions  = local.aws_endpoint
+      sts            = local.aws_endpoint
     }
-    
-    skip_credentials_validation = true
-    skip_metadata_api_check     = true
-    skip_requesting_account_id  = true
+  }
+  
+  # LocalStack skip settings (only for dev)
+  skip_credentials_validation = local.skip_credentials_validation
+  skip_metadata_api_check     = local.skip_metadata_api_check
+  skip_requesting_account_id  = local.skip_requesting_account_id
 }
 
 # IAM role for Lambda execution
 resource "aws_iam_role" "lambda_basic_exec" {
-  name = "lambda_basic_exec"
+  name = "${var.lambda_function_name}-${terraform.workspace}-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -56,6 +75,12 @@ resource "aws_iam_role" "lambda_basic_exec" {
       }
     ]
   })
+
+  tags = {
+    Environment = terraform.workspace
+    Project     = "aws-lambda-java-demo"
+    Group       = "aws-code"
+  }
 }
 
 # IAM policy attachment for basic Lambda execution
@@ -64,14 +89,20 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.lambda_basic_exec.name
 }
 
-# Create AWS Lambda from Java project
+# Lambda function with workspace-specific naming
 resource "aws_lambda_function" "java_lambda" {
-    function_name = var.lambda_function_name
-    filename      = var.lambda_function_jar_path
-    handler       = var.lambda_function_handler
-    runtime       = var.lambda_function_java_runtime
-    role          = aws_iam_role.lambda_basic_exec.arn
-    source_code_hash = filebase64sha256(var.lambda_function_jar_path)
-    memory_size   = var.lambda_function_memory_size
-    timeout       = 30
+  function_name    = "${var.lambda_function_name}-${terraform.workspace}"
+  filename         = var.lambda_function_jar_path
+  handler          = var.lambda_function_handler
+  runtime          = var.lambda_function_java_runtime
+  role            = aws_iam_role.lambda_basic_exec.arn
+  source_code_hash = filebase64sha256(var.lambda_function_jar_path)
+  memory_size     = var.lambda_function_memory_size
+  timeout         = var.lambda_function_timeout
+
+  tags = {
+    Environment = terraform.workspace
+    Project     = "aws-lambda-java-demo"
+    Group       = "aws-code"
+  }
 }
