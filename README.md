@@ -5,6 +5,7 @@ This repository contains a collection of projects and experiments focused on int
 ## Projects
 
 *   **[spring-boot-3-aws-sm](./spring-boot-3-aws-sm):** A Spring Boot 3 application demonstrating integration with AWS Secrets Manager.
+*   **[aws-lambda-java-demo](./aws-lambda-java-demo):** A Java Lambda function with Infrastructure as Code (Terraform) for AWS deployment and LocalStack testing.
 
 ## Getting Started
 

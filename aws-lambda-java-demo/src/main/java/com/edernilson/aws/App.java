@@ -1,4 +1,4 @@
-package com.edernilson;
+package com.edernilson.aws;
 
 /**
  * Hello world!

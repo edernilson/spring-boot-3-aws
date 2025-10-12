@@ -1,4 +1,4 @@
-package com.edernilson;
+package com.edernilson.aws;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
